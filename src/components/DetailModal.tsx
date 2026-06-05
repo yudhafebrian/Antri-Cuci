@@ -143,8 +143,6 @@ export default function DetailModal({ carId, queue, onClose, onRefresh, onToast 
     onClose();
   };
 
-  const hargaNum = parseInt(harga.replace(/\D/g, '')) || 0;
-
   return (
     <div
       className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center"
@@ -201,7 +199,10 @@ export default function DetailModal({ carId, queue, onClose, onRefresh, onToast 
                     <div key={group}>
                       <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#aaa] uppercase tracking-wider sticky top-0 bg-white">{group}</div>
                       {items.map((p) => (
-                        <div key={p.label} className={`px-3 py-2.5 cursor-pointer text-sm border-b border-[#F5F5F0] last:border-none hover:bg-[#EDF5FF] hover:text-[#185FA5] ${p.label === paket ? 'text-[#185FA5] bg-[#EDF5FF]' : 'text-[#1a1a1a]'}`} onClick={() => selectPaket(p.label)}>{p.label}</div>
+                        <div key={p.label} className={`px-3 py-2.5 cursor-pointer text-sm border-b border-[#F5F5F0] last:border-none hover:bg-[#EDF5FF] hover:text-[#185FA5] flex items-center justify-between ${p.label === paket ? 'text-[#185FA5] bg-[#EDF5FF]' : 'text-[#1a1a1a]'}`} onClick={() => selectPaket(p.label)}>
+                          <span className="truncate mr-2">{p.label}</span>
+                          <span className="text-[11px] text-[#888] whitespace-nowrap flex-shrink-0">Rp {fmtRp(p.sizes[0].price)}</span>
+                        </div>
                       ))}
                     </div>
                   ))}
@@ -222,7 +223,7 @@ export default function DetailModal({ carId, queue, onClose, onRefresh, onToast 
                   onChange={(e) => onSizeChange(e.target.value)}
                 >
                   {paketData?.sizes.map((s) => (
-                    <option key={s.size} value={s.size}>{s.size}</option>
+                    <option key={s.size} value={s.size}>{s.size} — Rp {fmtRp(s.price)}</option>
                   )) ?? <option>{size}</option>}
                 </select>
               </div>
@@ -235,9 +236,6 @@ export default function DetailModal({ carId, queue, onClose, onRefresh, onToast 
                   onChange={(e) => setHarga(e.target.value.replace(/\D/g, ''))}
                   placeholder="0"
                 />
-                {hargaNum > 0 && (
-                  <div className="text-[11px] text-[#888] mt-0.5">{fmtRp(hargaNum)}</div>
-                )}
               </div>
             </div>
 

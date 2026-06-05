@@ -30,9 +30,7 @@ interface Props {
 
 export default function QueueForm({ queue, onAdded }: Props) {
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory | null>(null);
-  const [platPrefix, setPlatPrefix] = useState('');
-  const [platNum, setPlatNum] = useState('');
-  const [platSuffix, setPlatSuffix] = useState('');
+  const [plat, setPlat] = useState('');
   const [wa, setWa] = useState('');
   const [nama, setNama] = useState('');
   const [merk, setMerk] = useState('');
@@ -51,18 +49,14 @@ export default function QueueForm({ queue, onAdded }: Props) {
 
   const acTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const platRef = useRef<HTMLDivElement>(null);
-  const platNumRef = useRef<HTMLInputElement>(null);
-  const platSuffixRef = useRef<HTMLInputElement>(null);
   const merkRef = useRef<HTMLDivElement>(null);
   const paketRef = useRef<HTMLDivElement>(null);
 
-  const buildPlat = (prefix: string, num: string, suffix: string) => {
-    const parts = [prefix.trim(), num.trim(), suffix.trim()].filter(Boolean);
-    return parts.join(' ').toUpperCase();
+  const shouldSearch = (combined: string) => {
+    const withoutSpace = combined.replace(/\s/g, '');
+    return withoutSpace.length > 0 && /\d/.test(withoutSpace);
   };
-  const plat = buildPlat(platPrefix, platNum, platSuffix);
 
-  const shouldSearch = (combined: string) => /[A-Za-z]/.test(combined) && /\d/.test(combined);
 
   const merkDB = vehicleCategory === 'motor' ? MERK_DB_MOTOR : MERK_DB_MOBIL;
   const paketGroups = vehicleCategory === 'motor' ? PAKET_GROUPS_MOTOR : PAKET_GROUPS_MOBIL;
@@ -87,53 +81,42 @@ export default function QueueForm({ queue, onAdded }: Props) {
 
   const fetchHistory = async (q: string) => {
     if (q.length === 0) {
-      const result = await supabase.from('vehicle_history').select('plat, wa, nama, merk, vehicle_category').order('created_at', { ascending: false }).limit(8);
-      if (result.data && result.data.length > 0) { setAcResults(result.data as HistoryHit[]); setAcOpen(true); }
+      setAcOpen(false);
       return;
     }
-    if (!shouldSearch(q)) { setAcOpen(false); return; }
-    const result = await supabase.from('vehicle_history').select('plat, wa, nama, merk, vehicle_category').ilike('plat', `${q}%`).limit(8);
-    if (result.data && result.data.length > 0) { setAcResults(result.data as HistoryHit[]); setAcOpen(true); }
-    else setAcOpen(false);
+    if (!shouldSearch(q)) {
+      setAcOpen(false);
+      return;
+    }
+    const qNorm = q.replace(/\s/g, '').toUpperCase();
+    const result = await supabase.from('vehicle_history').select('plat, wa, nama, merk, vehicle_category').order('created_at', { ascending: false }).limit(30);
+    if (result.data) {
+      const filtered = result.data.filter((h) => h.plat.replace(/\s/g, '').toUpperCase().startsWith(qNorm));
+      if (filtered.length > 0) { setAcResults(filtered.slice(0, 8) as HistoryHit[]); setAcOpen(true); }
+      else setAcOpen(false);
+    } else {
+      setAcOpen(false);
+    }
   };
 
-  const triggerSearch = (prefix: string, num: string, suffix: string) => {
+  const triggerSearch = (val: string) => {
     if (acTimeout.current) clearTimeout(acTimeout.current);
-    const combined = buildPlat(prefix, num, suffix);
-    acTimeout.current = setTimeout(() => fetchHistory(combined), 200);
+    acTimeout.current = setTimeout(() => fetchHistory(val), 200);
   };
 
-  const onPlatPrefixChange = (v: string) => {
-    const val = v.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 2);
-    setPlatPrefix(val);
-    triggerSearch(val, platNum, platSuffix);
-    if (val.length >= 2 && platNumRef.current) platNumRef.current.focus();
-  };
-
-  const onPlatNumChange = (v: string) => {
-    const val = v.replace(/\D/g, '').slice(0, 4);
-    setPlatNum(val);
-    triggerSearch(platPrefix, val, platSuffix);
-    if (val.length >= 4 && platSuffixRef.current) platSuffixRef.current.focus();
-  };
-
-  const onPlatSuffixChange = (v: string) => {
-    const val = v.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);
-    setPlatSuffix(val);
-    triggerSearch(platPrefix, platNum, val);
+  const onPlatChange = (v: string) => {
+    const val = v.replace(/[^A-Za-z0-9\s]/g, '');
+    setPlat(val);
+    triggerSearch(val);
   };
 
   const onPlatFocus = () => {
     if (acTimeout.current) clearTimeout(acTimeout.current);
-    const combined = buildPlat(platPrefix, platNum, platSuffix);
-    fetchHistory(combined);
+    if (shouldSearch(plat)) fetchHistory(plat);
   };
 
   const fillFromHistory = (h: HistoryHit) => {
-    const parts = h.plat.split(' ');
-    setPlatPrefix(parts[0] ?? '');
-    setPlatNum(parts[1] ?? '');
-    setPlatSuffix(parts[2] ?? '');
+    setPlat(h.plat.toUpperCase());
     setWa(h.wa);
     setNama(h.nama);
     setMerk(h.merk);
@@ -215,7 +198,7 @@ export default function QueueForm({ queue, onAdded }: Props) {
       { onConflict: 'plat' }
     );
 
-    setPlatPrefix(''); setPlatNum(''); setPlatSuffix(''); setWa(''); setNama(''); setMerk('');
+    setPlat(''); setWa(''); setNama(''); setMerk('');
     setPaket(''); setSize(''); setHarga(''); setNotes('');
     setLoading(false);
     onAdded();
@@ -228,7 +211,6 @@ export default function QueueForm({ queue, onAdded }: Props) {
   };
 
   const paketData = getPaket(paket);
-  const hargaNum = parseInt(harga.replace(/\D/g, '')) || 0;
 
   return (
     <div className="bg-white rounded-2xl border border-[#EAEAE6] p-4 mb-3">
@@ -236,43 +218,15 @@ export default function QueueForm({ queue, onAdded }: Props) {
       {/* Plat + Autocomplete */}
       <div className="mb-3 relative" ref={platRef}>
         <label className="block text-xs font-medium text-[#555] mb-1">Nomor Plat Kendaraan</label>
-        <div className="flex items-center gap-1.5">
-          <input
-            className="w-16 border border-[#DDDDD8] rounded-xl px-2.5 py-2.5 text-sm font-bold text-[#1a1a1a] text-center outline-none focus:border-[#378ADD] focus:ring-2 focus:ring-[#378ADD]/10 transition-all uppercase bg-white tracking-widest"
-            placeholder="B"
-            maxLength={2}
-            value={platPrefix}
-            onChange={(e) => onPlatPrefixChange(e.target.value)}
-            onFocus={onPlatFocus}
-            autoComplete="off"
-          />
-          <span className="text-[#bbb] text-base font-light select-none">·</span>
-          <input
-            ref={platNumRef}
-            className="w-20 border border-[#DDDDD8] rounded-xl px-2.5 py-2.5 text-sm font-bold text-[#1a1a1a] text-center outline-none focus:border-[#378ADD] focus:ring-2 focus:ring-[#378ADD]/10 transition-all bg-white tracking-widest"
-            placeholder="1234"
-            inputMode="numeric"
-            maxLength={4}
-            value={platNum}
-            onChange={(e) => onPlatNumChange(e.target.value)}
-            onFocus={onPlatFocus}
-            autoComplete="off"
-          />
-          <span className="text-[#bbb] text-base font-light select-none">·</span>
-          <input
-            ref={platSuffixRef}
-            className="flex-1 border border-[#DDDDD8] rounded-xl px-2.5 py-2.5 text-sm font-bold text-[#1a1a1a] text-center outline-none focus:border-[#378ADD] focus:ring-2 focus:ring-[#378ADD]/10 transition-all uppercase bg-white tracking-widest"
-            placeholder="ABC"
-            maxLength={3}
-            value={platSuffix}
-            onChange={(e) => onPlatSuffixChange(e.target.value)}
-            onFocus={onPlatFocus}
-            autoComplete="off"
-          />
-        </div>
-        {plat && (
-          <div className="text-[11px] text-[#aaa] mt-1 ml-0.5">{plat}</div>
-        )}
+        <input
+          className="w-full border border-[#DDDDD8] rounded-xl px-3 py-2.5 text-sm font-bold text-[#1a1a1a] outline-none focus:border-[#378ADD] focus:ring-2 focus:ring-[#378ADD]/10 transition-all uppercase bg-white tracking-widest"
+          placeholder="Contoh: B 1234 ABC"
+          maxLength={11}
+          value={plat}
+          onChange={(e) => onPlatChange(e.target.value)}
+          onFocus={onPlatFocus}
+          autoComplete="off"
+        />
         {acOpen && acResults.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#DDDDD8] rounded-xl z-50 shadow-lg max-h-52 overflow-y-auto">
             {acResults.map((h) => (
@@ -397,7 +351,10 @@ export default function QueueForm({ queue, onAdded }: Props) {
                 <div key={group}>
                   <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#aaa] uppercase tracking-wider sticky top-0 bg-white">{group}</div>
                   {items.map((p) => (
-                    <div key={p.label} className="px-3 py-2.5 cursor-pointer text-sm text-[#1a1a1a] hover:bg-[#EDF5FF] hover:text-[#185FA5] border-b border-[#F5F5F0] last:border-none" onClick={() => selectPaket(p.label)}>{p.label}</div>
+                    <div key={p.label} className="px-3 py-2.5 cursor-pointer text-sm text-[#1a1a1a] hover:bg-[#EDF5FF] hover:text-[#185FA5] border-b border-[#F5F5F0] last:border-none flex items-center justify-between" onClick={() => selectPaket(p.label)}>
+                      <span className="truncate mr-2">{p.label}</span>
+                      <span className="text-[11px] text-[#888] whitespace-nowrap flex-shrink-0">Rp {fmtRp(p.sizes[0].price)}</span>
+                    </div>
                   ))}
                 </div>
               ))}
@@ -435,9 +392,6 @@ export default function QueueForm({ queue, onAdded }: Props) {
               onChange={(e) => setHarga(e.target.value.replace(/\D/g, ''))}
               placeholder="0"
             />
-            {hargaNum > 0 && (
-              <div className="text-[11px] text-[#888] mt-0.5">{fmtRp(hargaNum)}</div>
-            )}
           </div>
         </div>
       )}
