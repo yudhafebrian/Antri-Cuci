@@ -33,6 +33,7 @@ const TL_COLORS: Record<string, string> = {
 export default function AntrianPage({ queue }: Props) {
   const [, setTick] = useState(0);
   const [tab, setTab] = useState<WorkflowType>('regular');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,6 +54,10 @@ export default function AntrianPage({ queue }: Props) {
     ? ['selesai', 'qc', 'kering', 'basah', 'menunggu']
     : ['selesai', 'poles', 'antri_poles', 'qc', 'kering', 'basah', 'menunggu'];
 
+  const kanbanStages: Stage[] = tab === 'regular'
+    ? ['menunggu', 'basah', 'kering', 'qc', 'selesai']
+    : ['menunggu', 'basah', 'kering', 'antri_poles', 'poles', 'qc', 'selesai'];
+
   const StageStats = ({ q, stages }: { q: ServiceOrderRow[]; stages: { stage: string | string[]; label: string; color: string }[] }) => (
     <div className="grid gap-1.5 mb-4" style={{ gridTemplateColumns: `repeat(${stages.length}, 1fr)` }}>
       {stages.map(({ stage, label, color }) => {
@@ -69,9 +74,9 @@ export default function AntrianPage({ queue }: Props) {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] flex justify-center">
-      <div className="w-full max-w-[430px] min-h-screen bg-[#F5F5F0] relative overflow-x-hidden">
-        <div className="bg-white border-b border-[#E8E8E4] px-4 py-3.5 flex items-center sticky top-0 z-30">
+    <div className="min-h-screen bg-[#F5F5F0] w-full relative overflow-x-hidden">
+      <div className="w-full min-h-screen bg-[#F5F5F0]">
+        <div className="bg-white border-b border-[#E8E8E4] px-6 py-3.5 flex items-center sticky top-0 z-30">
           <button onClick={() => navigate('/')} className="flex items-center gap-2 text-[17px] font-semibold text-[#1a1a1a] cursor-pointer">
             <img src="/Logo-FIP-Black-Transparent-NoText.webp" alt="FIP" className="h-6 w-auto object-contain" />
             FIP Autoshop
@@ -101,10 +106,26 @@ export default function AntrianPage({ queue }: Props) {
           </div>
         )}
 
-        <div className="px-4 pt-3 pb-6">
-          <div className="flex items-center gap-2 bg-[#EAF3DE] rounded-full px-3.5 py-2 text-xs font-medium text-[#27500A] mb-3 w-fit">
-            <span className="w-2 h-2 rounded-full bg-[#1D9E75] animate-pulse" />
-            Realtime
+        <div className="px-6 pt-4 pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 bg-[#EAF3DE] rounded-full px-3.5 py-2 text-xs font-medium text-[#27500A] w-fit">
+              <span className="w-2 h-2 rounded-full bg-[#1D9E75] animate-pulse" />
+              Realtime
+            </div>
+            <div className="flex bg-white rounded-lg border border-[#EAEAE6] p-1">
+              <button
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${viewMode === 'list' ? 'bg-[#185FA5] text-white' : 'text-[#888] hover:text-[#1a1a1a]'}`}
+                onClick={() => setViewMode('list')}
+              >
+                List
+              </button>
+              <button
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${viewMode === 'kanban' ? 'bg-[#185FA5] text-white' : 'text-[#888] hover:text-[#1a1a1a]'}`}
+                onClick={() => setViewMode('kanban')}
+              >
+                Kanban
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-2 mb-4">
@@ -152,47 +173,91 @@ export default function AntrianPage({ queue }: Props) {
             ]} />
           )}
 
-          <p className="text-[11px] font-semibold text-[#999] uppercase tracking-wider mb-2">Status kendaraan</p>
+          {viewMode === 'list' && (
+            <>
+              <p className="text-[11px] font-semibold text-[#999] uppercase tracking-wider mb-2">Status kendaraan</p>
 
-          {activeQueue.length === 0 ? (
-            <div className="text-center py-10 text-[#aaa]">
-              <div className="text-3xl mb-2">✅</div>
-              <p className="text-sm font-semibold text-[#3B6D11]">Antrian kosong!</p>
-            </div>
-          ) : (
-            displayStages.map((stage) => {
-              const group = activeQueue.filter((c) => c.current_status === stage);
-              if (!group.length) return null;
-              const cfg = STAGE_CFG[stage];
-              return (
-                <div key={stage}>
-                  <div className="flex items-center justify-between my-2">
-                    <span
-                      className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                      style={{ background: cfg.badgeBg, color: cfg.badgeColor }}
-                    >
-                      {cfg.label}
-                    </span>
-                    <span className="text-xs text-[#aaa]">{group.length} kendaraan</span>
-                  </div>
-                  {group.map((order) => {
-                    const eta = etaMenit(order, activeQueue);
-                    return (
-                      <div key={order.id} className="bg-white border border-[#EAEAE6] rounded-xl px-4 py-3 flex items-center justify-between mb-2">
-                        <div>
-                          <div className="text-[15px] font-semibold text-[#1a1a1a]">{order.plate_number}</div>
-                          <div className="text-xs text-[#aaa] mt-0.5">{order.vehicle_name} · {order.package_name}{order.variant_name !== 'All Size' ? ` · ${order.variant_name}` : ''}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-semibold" style={{ color: TL_COLORS[stage] ?? '#888' }}>~{eta} mnt</div>
-                          <div className="text-[11px] text-[#aaa]">est. selesai</div>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {activeQueue.length === 0 ? (
+                <div className="text-center py-10 text-[#aaa]">
+                  <div className="text-3xl mb-2">✅</div>
+                  <p className="text-sm font-semibold text-[#3B6D11]">Antrian kosong!</p>
                 </div>
-              );
-            })
+              ) : (
+                displayStages.map((stage) => {
+                  const group = activeQueue.filter((c) => c.current_status === stage);
+                  if (!group.length) return null;
+                  const cfg = STAGE_CFG[stage];
+                  return (
+                    <div key={stage}>
+                      <div className="flex items-center justify-between my-2">
+                        <span
+                          className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                          style={{ background: cfg.badgeBg, color: cfg.badgeColor }}
+                        >
+                          {cfg.label}
+                        </span>
+                        <span className="text-xs text-[#aaa]">{group.length} kendaraan</span>
+                      </div>
+                      {group.map((order) => {
+                        const eta = etaMenit(order, activeQueue);
+                        return (
+                          <div key={order.id} className="bg-white border border-[#EAEAE6] rounded-xl px-4 py-3 flex items-center justify-between mb-2">
+                            <div>
+                              <div className="text-[15px] font-semibold text-[#1a1a1a]">{order.plate_number}</div>
+                              <div className="text-xs text-[#aaa] mt-0.5">{order.vehicle_name} · {order.package_name}{order.variant_name !== 'All Size' ? ` · ${order.variant_name}` : ''}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-semibold" style={{ color: TL_COLORS[stage] ?? '#888' }}>~{eta} mnt</div>
+                              <div className="text-[11px] text-[#aaa]">est. selesai</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })
+              )}
+            </>
+          )}
+
+          {viewMode === 'kanban' && (
+            <div>
+              <p className="text-[11px] font-semibold text-[#999] uppercase tracking-wider mb-3">Kanban View</p>
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {kanbanStages.map((stage) => {
+                  const group = activeQueue.filter((c) => c.current_status === stage);
+                  const cfg = STAGE_CFG[stage];
+                  return (
+                    <div key={stage} className="flex-shrink-0 w-80 bg-[#F0F0EB] rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: cfg.badgeBg, color: cfg.badgeColor }}>
+                          {cfg.label}
+                        </span>
+                        <span className="text-xs text-[#aaa] font-medium">{group.length}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {group.map((order) => {
+                          const eta = etaMenit(order, activeQueue);
+                          return (
+                            <div key={order.id} className="bg-white border border-[#EAEAE6] rounded-xl p-3 shadow-sm">
+                              <div className="text-[15px] font-semibold text-[#1a1a1a] mb-1">{order.plate_number}</div>
+                              <div className="text-xs text-[#888] mb-2">{order.vehicle_name} · {order.package_name}{order.variant_name !== 'All Size' ? ` · ${order.variant_name}` : ''}</div>
+                              <div className="flex items-center justify-between pt-2 border-t border-[#F5F5F0]">
+                                <div className="text-xs text-[#aaa]">Estimasi</div>
+                                <div className="text-sm font-semibold" style={{ color: TL_COLORS[stage] ?? '#888' }}>~{eta} mnt</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {group.length === 0 && (
+                          <div className="text-center py-8 text-[#bbb] text-xs border-2 border-dashed border-[#DDD] rounded-xl">Kosong</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
       </div>

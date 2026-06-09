@@ -129,8 +129,8 @@ export default function AdminPage() {
             Report
           </button>
           <button
-            className="flex-1 py-3 text-[13px] font-medium border-b-2 text-[#185FA5] border-[#185FA5] cursor-pointer"
-            onClick={() => navigate('/')}
+            className="flex-1 py-3 text-[13px] font-medium border-b-2 border-transparent text-[#666] hover:text-[#185FA5] hover:border-[#185FA5] transition-all cursor-pointer"
+            onClick={() => navigate('/antrian')}
           >
             Lihat Antrian
           </button>

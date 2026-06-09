@@ -25,7 +25,7 @@ export default function App() {
     <div className="min-h-screen bg-[#F5F5F0] flex justify-center">
       <Routes>
         <Route path="/" element={
-          <AntrianPage queue={queue} />
+          <AdminPage />
         } />
         <Route path="/admin" element={
           <AdminPage />

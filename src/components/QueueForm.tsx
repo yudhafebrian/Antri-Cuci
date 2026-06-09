@@ -287,29 +287,6 @@ export default function QueueForm({ queue, onAdded }: Props) {
         )}
       </div>
 
-      {/* WA */}
-      <div className="mb-3">
-        <label className="block text-xs font-medium text-[#555] mb-1">Nomor WhatsApp Pemilik <span className="font-normal text-[#bbb] text-[11px]">(opsional)</span></label>
-        <input
-          className="w-full border border-[#DDDDD8] rounded-xl px-3 py-2.5 text-sm text-[#1a1a1a] outline-none focus:border-[#378ADD] focus:ring-2 focus:ring-[#378ADD]/10 transition-all"
-          placeholder="08123456789"
-          inputMode="numeric"
-          value={wa}
-          onChange={(e) => setWa(e.target.value)}
-        />
-      </div>
-
-      {/* Nama */}
-      <div className="mb-3">
-        <label className="block text-xs font-medium text-[#555] mb-1">Nama Pemilik <span className="font-normal text-[#bbb] text-[11px]">(opsional)</span></label>
-        <input
-          className="w-full border border-[#DDDDD8] rounded-xl px-3 py-2.5 text-sm text-[#1a1a1a] outline-none focus:border-[#378ADD] focus:ring-2 focus:ring-[#378ADD]/10 transition-all"
-          placeholder="Contoh: Budi Santoso"
-          value={nama}
-          onChange={(e) => setNama(e.target.value)}
-        />
-      </div>
-
       {/* Vehicle Category Toggle */}
       <div className="mb-3">
         <label className="block text-xs font-medium text-[#555] mb-2">Jenis Kendaraan</label>
@@ -325,43 +302,6 @@ export default function QueueForm({ queue, onAdded }: Props) {
           ))}
         </div>
       </div>
-
-      {/* Merk */}
-      {vehicleCategory && (
-        <div className="mb-3 relative" ref={merkRef}>
-          <label className="block text-xs font-medium text-[#555] mb-1">
-            Merek {vehicleCategory === 'mobil' ? 'Mobil' : 'Motor'}
-          </label>
-          <div className="relative">
-            <input
-              className="w-full border border-[#DDDDD8] rounded-xl px-3 py-2.5 text-sm text-[#1a1a1a] outline-none focus:border-[#378ADD] focus:ring-2 focus:ring-[#378ADD]/10 transition-all pr-8"
-              placeholder="Ketik atau pilih merek…"
-              value={merk}
-              onChange={(e) => { setMerk(e.target.value); setMerkOpen(true); }}
-              onFocus={() => setMerkOpen(true)}
-              autoComplete="off"
-            />
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#aaa] pointer-events-none" />
-          </div>
-          {merkOpen && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#DDDDD8] rounded-xl z-50 shadow-lg max-h-56 overflow-y-auto">
-              {merkGroups.map(({ grp, items }) => (
-                <div key={grp}>
-                  <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#aaa] uppercase tracking-wider">{grp}</div>
-                  {items.map((item) => (
-                    <div key={item} className="px-3 py-2.5 cursor-pointer text-sm text-[#1a1a1a] hover:bg-[#EDF5FF] hover:text-[#185FA5] border-b border-[#F5F5F0] last:border-none" onClick={() => selectMerk(item)}>{item}</div>
-                  ))}
-                </div>
-              ))}
-              {merk.trim() && !merkExact && (
-                <div className="px-3 py-2.5 cursor-pointer text-sm text-[#185FA5] font-semibold flex items-center gap-2 border-t border-[#E8E8E4] hover:bg-[#EDF5FF]" onClick={addCustomMerk}>
-                  <span className="text-base">＋</span> Tambah "{merk.trim()}"
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Package picker */}
       {vehicleCategory && (
@@ -411,6 +351,43 @@ export default function QueueForm({ queue, onAdded }: Props) {
         </div>
       )}
 
+      {/* Merk */}
+      {vehicleCategory && (
+        <div className="mb-3 relative" ref={merkRef}>
+          <label className="block text-xs font-medium text-[#555] mb-1">
+            Merek {vehicleCategory === 'mobil' ? 'Mobil' : 'Motor'}
+          </label>
+          <div className="relative">
+            <input
+              className="w-full border border-[#DDDDD8] rounded-xl px-3 py-2.5 text-sm text-[#1a1a1a] outline-none focus:border-[#378ADD] focus:ring-2 focus:ring-[#378ADD]/10 transition-all pr-8"
+              placeholder="Ketik atau pilih merek…"
+              value={merk}
+              onChange={(e) => { setMerk(e.target.value); setMerkOpen(true); }}
+              onFocus={() => setMerkOpen(true)}
+              autoComplete="off"
+            />
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#aaa] pointer-events-none" />
+          </div>
+          {merkOpen && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#DDDDD8] rounded-xl z-50 shadow-lg max-h-56 overflow-y-auto">
+              {merkGroups.map(({ grp, items }) => (
+                <div key={grp}>
+                  <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#aaa] uppercase tracking-wider">{grp}</div>
+                  {items.map((item) => (
+                    <div key={item} className="px-3 py-2.5 cursor-pointer text-sm text-[#1a1a1a] hover:bg-[#EDF5FF] hover:text-[#185FA5] border-b border-[#F5F5F0] last:border-none" onClick={() => selectMerk(item)}>{item}</div>
+                  ))}
+                </div>
+              ))}
+              {merk.trim() && !merkExact && (
+                <div className="px-3 py-2.5 cursor-pointer text-sm text-[#185FA5] font-semibold flex items-center gap-2 border-t border-[#E8E8E4] hover:bg-[#EDF5FF]" onClick={addCustomMerk}>
+                  <span className="text-base">＋</span> Tambah "{merk.trim()}"
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Variant picker — only shown when package has >1 variant */}
       {selectedPackage && variants.length > 1 && (
         <div className="mb-3 grid grid-cols-2 gap-2">
@@ -446,6 +423,29 @@ export default function QueueForm({ queue, onAdded }: Props) {
           <span className="text-sm font-bold text-[#185FA5]">{fmtRp(selectedVariant.price)}</span>
         </div>
       )}
+
+      {/* WA */}
+      <div className="mb-3">
+        <label className="block text-xs font-medium text-[#555] mb-1">Nomor WhatsApp Pemilik <span className="font-normal text-[#bbb] text-[11px]">(opsional)</span></label>
+        <input
+          className="w-full border border-[#DDDDD8] rounded-xl px-3 py-2.5 text-sm text-[#1a1a1a] outline-none focus:border-[#378ADD] focus:ring-2 focus:ring-[#378ADD]/10 transition-all"
+          placeholder="08123456789"
+          inputMode="numeric"
+          value={wa}
+          onChange={(e) => setWa(e.target.value)}
+        />
+      </div>
+
+      {/* Nama */}
+      <div className="mb-3">
+        <label className="block text-xs font-medium text-[#555] mb-1">Nama Pemilik <span className="font-normal text-[#bbb] text-[11px]">(opsional)</span></label>
+        <input
+          className="w-full border border-[#DDDDD8] rounded-xl px-3 py-2.5 text-sm text-[#1a1a1a] outline-none focus:border-[#378ADD] focus:ring-2 focus:ring-[#378ADD]/10 transition-all"
+          placeholder="Contoh: Budi Santoso"
+          value={nama}
+          onChange={(e) => setNama(e.target.value)}
+        />
+      </div>
 
       {/* Notes */}
       <div className="mb-3">
