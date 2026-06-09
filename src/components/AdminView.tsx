@@ -2,21 +2,21 @@ import { useState } from 'react';
 import QueueForm from './QueueForm';
 import QueueList from './QueueList';
 import DetailModal from './DetailModal';
-import { type QueueRow } from '../lib/supabase';
-import { type VehicleType } from '../lib/constants';
+import { type ServiceOrderRow } from '../lib/db';
+import { type WorkflowType } from '../lib/constants';
 
 interface Props {
-  queue: QueueRow[];
+  queue: ServiceOrderRow[];
   onRefresh: () => void;
   onToast: (msg: string) => void;
 }
 
 export default function AdminView({ queue, onRefresh, onToast }: Props) {
-  const [queueTab, setQueueTab] = useState<VehicleType>('regular');
+  const [queueTab, setQueueTab] = useState<WorkflowType>('regular');
   const [detailId, setDetailId] = useState<string | null>(null);
 
-  const regularQueue = queue.filter((c) => c.type === 'regular');
-  const premiumQueue = queue.filter((c) => c.type === 'premium');
+  const regularQueue = queue.filter((c) => c.workflow_type === 'regular');
+  const premiumQueue = queue.filter((c) => c.workflow_type === 'premium');
 
   const StatCard = ({ count, label, color }: { count: number; label: string; color: string }) => (
     <div className="bg-white border border-[#EAEAE6] rounded-xl py-2 px-1 text-center">
@@ -36,55 +36,59 @@ export default function AdminView({ queue, onRefresh, onToast }: Props) {
 
           {/* Sub-tabs with count badge */}
           <div className="flex gap-2 mb-3">
-            {(['regular', 'premium'] as VehicleType[]).map((t) => (
-              <button
-                key={t}
-                className={`flex-1 py-2.5 text-xs font-semibold rounded-xl border-2 transition-all ${
-                  queueTab === t
-                    ? t === 'regular'
-                      ? 'border-[#185FA5] bg-[#EDF5FF] text-[#185FA5]'
-                      : 'border-[#8B44E0] bg-[#F0E6FB] text-[#4A0C7C]'
-                    : 'border-[#EAEAE6] bg-white text-[#888] hover:border-[#bbb]'
-                }`}
-                onClick={() => setQueueTab(t)}
-              >
-                {t === 'regular' ? 'Regular Wash' : 'Premium Wash'}
-                {(t === 'regular' ? regularQueue : premiumQueue).filter((c) => c.stage !== 'selesai').length > 0 && (
-                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
+            {(['regular', 'premium'] as WorkflowType[]).map((t) => {
+              const tabQueue = t === 'regular' ? regularQueue : premiumQueue;
+              const activeCount = tabQueue.filter((c) => c.current_status !== 'selesai').length;
+              return (
+                <button
+                  key={t}
+                  className={`flex-1 py-2.5 text-xs font-semibold rounded-xl border-2 transition-all ${
                     queueTab === t
-                      ? t === 'regular' ? 'bg-[#185FA5] text-white' : 'bg-[#8B44E0] text-white'
-                      : 'bg-[#EAEAE6] text-[#888]'
-                  }`}>
-                    {(t === 'regular' ? regularQueue : premiumQueue).filter((c) => c.stage !== 'selesai').length}
-                  </span>
-                )}
-              </button>
-            ))}
+                      ? t === 'regular'
+                        ? 'border-[#185FA5] bg-[#EDF5FF] text-[#185FA5]'
+                        : 'border-[#8B44E0] bg-[#F0E6FB] text-[#4A0C7C]'
+                      : 'border-[#EAEAE6] bg-white text-[#888] hover:border-[#bbb]'
+                  }`}
+                  onClick={() => setQueueTab(t)}
+                >
+                  {t === 'regular' ? 'Regular Wash' : 'Premium Wash'}
+                  {activeCount > 0 && (
+                    <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
+                      queueTab === t
+                        ? t === 'regular' ? 'bg-[#185FA5] text-white' : 'bg-[#8B44E0] text-white'
+                        : 'bg-[#EAEAE6] text-[#888]'
+                    }`}>
+                      {activeCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Per-tab stats */}
           {queueTab === 'regular' ? (
             <div className="grid grid-cols-4 gap-1.5 mb-3">
-              <StatCard count={regularQueue.filter((c) => c.stage === 'waiting').length} label="Menunggu" color="#BA7517" />
-              <StatCard count={regularQueue.filter((c) => c.stage === 'basah').length} label="Basah" color="#185FA5" />
-              <StatCard count={regularQueue.filter((c) => c.stage === 'kering' || c.stage === 'qc').length} label="Kering & QC" color="#3B6D11" />
-              <StatCard count={regularQueue.filter((c) => c.stage === 'selesai').length} label="Selesai" color="#1D9E75" />
+              <StatCard count={regularQueue.filter((c) => c.current_status === 'menunggu').length} label="Menunggu" color="#BA7517" />
+              <StatCard count={regularQueue.filter((c) => c.current_status === 'basah').length} label="Basah" color="#185FA5" />
+              <StatCard count={regularQueue.filter((c) => c.current_status === 'kering' || c.current_status === 'qc').length} label="Kering & QC" color="#3B6D11" />
+              <StatCard count={regularQueue.filter((c) => c.current_status === 'selesai').length} label="Selesai" color="#1D9E75" />
             </div>
           ) : (
             <div className="grid grid-cols-6 gap-1 mb-3">
-              <StatCard count={premiumQueue.filter((c) => c.stage === 'waiting').length} label="Tunggu" color="#BA7517" />
-              <StatCard count={premiumQueue.filter((c) => c.stage === 'basah').length} label="Basah" color="#185FA5" />
-              <StatCard count={premiumQueue.filter((c) => c.stage === 'kering').length} label="Kering" color="#3B6D11" />
-              <StatCard count={premiumQueue.filter((c) => c.stage === 'antripoles').length} label="Antri Poles" color="#D44A9A" />
-              <StatCard count={premiumQueue.filter((c) => c.stage === 'poles').length} label="Poles" color="#E06520" />
-              <StatCard count={premiumQueue.filter((c) => c.stage === 'selesai').length} label="Selesai" color="#1D9E75" />
+              <StatCard count={premiumQueue.filter((c) => c.current_status === 'menunggu').length}    label="Tunggu"      color="#BA7517" />
+              <StatCard count={premiumQueue.filter((c) => c.current_status === 'basah').length}       label="Basah"       color="#185FA5" />
+              <StatCard count={premiumQueue.filter((c) => c.current_status === 'kering').length}      label="Kering"      color="#3B6D11" />
+              <StatCard count={premiumQueue.filter((c) => c.current_status === 'antri_poles').length} label="Antri Poles" color="#D44A9A" />
+              <StatCard count={premiumQueue.filter((c) => c.current_status === 'poles').length}       label="Poles"       color="#E06520" />
+              <StatCard count={premiumQueue.filter((c) => c.current_status === 'selesai').length}     label="Selesai"     color="#1D9E75" />
             </div>
           )}
         </div>
 
         <QueueList
           queue={queue}
-          type={queueTab}
+          workflowType={queueTab}
           onRefresh={onRefresh}
           onOpenDetail={setDetailId}
           onToast={onToast}
@@ -92,7 +96,7 @@ export default function AdminView({ queue, onRefresh, onToast }: Props) {
       </div>
 
       <DetailModal
-        carId={detailId}
+        orderId={detailId}
         queue={queue}
         onClose={() => setDetailId(null)}
         onRefresh={onRefresh}

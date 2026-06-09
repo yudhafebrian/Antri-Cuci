@@ -1,31 +1,33 @@
-import { ArrowRight, CornerUpLeft, MessageCircle, Info, Trash2, Clock } from 'lucide-react';
+import { ArrowRight, CornerUpLeft, MessageCircle, Info, X, CheckCheck, Clock } from 'lucide-react';
 import {
   STAGE_CFG,
   MENIT,
   stagesOf,
   waNo,
+  fmtRp,
   type Stage,
-  type VehicleType,
+  type WorkflowType,
 } from '../lib/constants';
-import { supabase, type QueueRow } from '../lib/supabase';
+import { updateServiceOrder, cancelServiceOrder, markOrderPickedUp, type ServiceOrderRow } from '../lib/db';
 
 interface Props {
-  queue: QueueRow[];
-  type: VehicleType;
+  queue: ServiceOrderRow[];
+  workflowType: WorkflowType;
   onRefresh: () => void;
   onOpenDetail: (id: string) => void;
   onToast: (msg: string) => void;
 }
 
-function etaMenit(car: QueueRow, queueOfType: QueueRow[]): number {
-  if (car.stage === 'selesai') return 0;
-  const stages = stagesOf(car.type as VehicleType);
-  const idx = stages.indexOf(car.stage as Stage);
-  const stageTime = car.times[car.stage] ? new Date(car.times[car.stage]).getTime() : Date.now();
+function etaMenit(order: ServiceOrderRow, queueOfType: ServiceOrderRow[]): number {
+  const stages = stagesOf(order.workflow_type as WorkflowType);
+  const idx = stages.indexOf(order.current_status as Stage);
+  const stageTime = order.times[order.current_status]
+    ? new Date(order.times[order.current_status]!).getTime()
+    : Date.now();
   const elapsed = (Date.now() - stageTime) / 60000;
 
-  if (car.stage === 'waiting') {
-    const wIdx = queueOfType.filter((c) => c.stage === 'waiting').indexOf(car);
+  if (order.current_status === 'menunggu') {
+    const wIdx = queueOfType.filter((c) => c.current_status === 'menunggu').indexOf(order);
     return MENIT * 2 + MENIT * wIdx;
   }
   const remaining = Math.max(0, Math.round(MENIT - elapsed));
@@ -34,7 +36,7 @@ function etaMenit(car: QueueRow, queueOfType: QueueRow[]): number {
 }
 
 interface CardProps {
-  car: QueueRow;
+  order: ServiceOrderRow;
   queuePos: number;
   eta: number;
   onRefresh: () => void;
@@ -42,55 +44,62 @@ interface CardProps {
   onToast: (msg: string) => void;
 }
 
-function QueueCard({ car, queuePos, eta, onRefresh, onOpenDetail, onToast }: CardProps) {
-  const stages = stagesOf(car.type as VehicleType);
-  const idx = stages.indexOf(car.stage as Stage);
+function QueueCard({ order, queuePos, eta, onRefresh, onOpenDetail, onToast }: CardProps) {
+  const stages = stagesOf(order.workflow_type as WorkflowType);
+  const idx = stages.indexOf(order.current_status as Stage);
   const canNext = idx < stages.length - 1;
   const canUndo = idx > 0;
-  const cfg = STAGE_CFG[car.stage as Stage];
+  const cfg = STAGE_CFG[order.current_status as Stage] ?? STAGE_CFG['menunggu'];
   const nextStage = canNext ? stages[idx + 1] : null;
   const prevStage = canUndo ? stages[idx - 1] : null;
-  const isDone = car.stage === 'selesai';
+  const isDone = order.current_status === 'selesai';
 
   const advance = async () => {
     if (!nextStage) return;
-    const newTimes = { ...car.times, [nextStage]: new Date().toISOString() };
-    const { error } = await supabase.from('queue').update({ stage: nextStage, times: newTimes }).eq('id', car.id);
-    if (error) { onToast('Gagal update: ' + error.message); return; }
-    onToast(`${car.plat} → ${STAGE_CFG[nextStage].label}`);
+    const newTimes = { ...order.times, [nextStage]: new Date().toISOString() };
+    const success = await updateServiceOrder(order.id, { current_status: nextStage, times: newTimes });
+    if (!success) { onToast('Gagal update'); return; }
+    onToast(`${order.plate_number} → ${STAGE_CFG[nextStage].label}`);
     onRefresh();
   };
 
   const undo = async () => {
     if (!prevStage) return;
-    const newTimes = { ...car.times };
-    delete newTimes[car.stage];
-    const { error } = await supabase.from('queue').update({ stage: prevStage, times: newTimes }).eq('id', car.id);
-    if (error) { onToast('Gagal undo: ' + error.message); return; }
-    onToast(`↩ ${car.plat} → ${STAGE_CFG[prevStage].label}`);
+    const newTimes = { ...order.times, [order.current_status]: null };
+    const success = await updateServiceOrder(order.id, { current_status: prevStage, times: newTimes });
+    if (!success) { onToast('Gagal undo'); return; }
+    onToast(`↩ ${order.plate_number} → ${STAGE_CFG[prevStage].label}`);
     onRefresh();
   };
 
-  const hapus = async () => {
-    if (!window.confirm(`Hapus ${car.plat} dari antrian?`)) return;
-    const { error } = await supabase.from('queue').delete().eq('id', car.id);
-    if (error) { onToast('Gagal hapus: ' + error.message); return; }
-    onToast(`${car.plat} dihapus`);
+  const cancel = async () => {
+    if (!window.confirm(`Batalkan ${order.plate_number} dari antrian?`)) return;
+    const success = await cancelServiceOrder(order.id);
+    if (!success) { onToast('Gagal batalkan'); return; }
+    onToast(`${order.plate_number} dibatalkan`);
+    onRefresh();
+  };
+
+  const pickUp = async () => {
+    if (!window.confirm(`Tandai ${order.plate_number} sudah diambil?`)) return;
+    const success = await markOrderPickedUp(order.id);
+    if (!success) { onToast('Gagal update'); return; }
+    onToast(`${order.plate_number} sudah diambil ✓`);
     onRefresh();
   };
 
   const kirimWA = () => {
     const msgs: Record<string, string> = {
-      waiting:    `Halo ${car.nama}! 😊\n\nKendaraannya masih dalam antrian ya kak, estimasi sekitar *${eta} menit* lagi.\n\nTerima kasih sudah sabar menunggu 🙏`,
-      basah:      `Halo ${car.nama}! 😊\n\nKendaraannya sudah masuk proses basah ya kak 🚿\n\nTerima kasih 🙏`,
-      kering:     `Halo ${car.nama}! 😊\n\nKendaraannya sedang proses pengeringan ya kak 💨\n\nTerima kasih 🙏`,
-      antripoles: `Halo ${car.nama}! 😊\n\nKendaraannya sedang menunggu antrian poles ya kak ✨\n\nTerima kasih 🙏`,
-      poles:      `Halo ${car.nama}! 😊\n\nKendaraannya sedang dalam proses poles ya kak ✨\n\nTerima kasih 🙏`,
-      qc:         `Halo ${car.nama}! 😊\n\nKendaraannya sedang pengecekan akhir (QC) ya kak, sebentar lagi selesai! 🎉\n\nTerima kasih 🙏`,
-      selesai:    `Halo ${car.nama}! 🎉\n\nKendaraan *${car.plat}* sudah selesai dan siap diambil ya kak!\n\nTerima kasih sudah mempercayakan kendaraan Anda kepada kami 🙏\n\n*FIP Autoshop*`,
+      menunggu:   `Halo ${order.owner_name}! 😊\n\nKendaraannya masih dalam antrian ya kak, estimasi sekitar *${eta} menit* lagi.\n\nTerima kasih sudah sabar menunggu 🙏`,
+      basah:      `Halo ${order.owner_name}! 😊\n\nKendaraannya sudah masuk proses basah ya kak 🚿\n\nTerima kasih 🙏`,
+      kering:     `Halo ${order.owner_name}! 😊\n\nKendaraannya sedang proses pengeringan ya kak 💨\n\nTerima kasih 🙏`,
+      antri_poles:`Halo ${order.owner_name}! 😊\n\nKendaraannya sedang menunggu antrian poles ya kak ✨\n\nTerima kasih 🙏`,
+      poles:      `Halo ${order.owner_name}! 😊\n\nKendaraannya sedang dalam proses poles ya kak ✨\n\nTerima kasih 🙏`,
+      qc:         `Halo ${order.owner_name}! 😊\n\nKendaraannya sedang pengecekan akhir (QC) ya kak, sebentar lagi selesai! 🎉\n\nTerima kasih 🙏`,
+      selesai:    `Halo ${order.owner_name}! 🎉\n\nKendaraan *${order.plate_number}* sudah selesai dan siap diambil ya kak!\n\nTerima kasih sudah mempercayakan kendaraan Anda kepada kami 🙏\n\n*FIP Autoshop*`,
     };
-    const teks = msgs[car.stage] ?? '';
-    if (teks) window.open(`https://wa.me/${waNo(car.wa)}?text=${encodeURIComponent(teks)}`, '_blank');
+    const teks = msgs[order.current_status] ?? '';
+    if (teks) window.open(`https://wa.me/${waNo(order.whatsapp_number)}?text=${encodeURIComponent(teks)}`, '_blank');
   };
 
   return (
@@ -104,12 +113,13 @@ function QueueCard({ car, queuePos, eta, onRefresh, onOpenDetail, onToast }: Car
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="text-[15px] font-semibold text-[#1a1a1a]">{car.plat}</span>
-            <span className="text-[11px] text-[#aaa]">{car.merk}</span>
+            <span className="text-[15px] font-semibold text-[#1a1a1a]">{order.plate_number}</span>
+            <span className="text-[11px] text-[#aaa]">{order.vehicle_name}</span>
           </div>
-          <div className="text-[12px] text-[#555] mt-0.5">{car.nama}</div>
-          <div className="mt-1">
-            <span className="text-[11px] text-[#185FA5] bg-[#EDF5FF] px-2 py-0.5 rounded-full">{car.paket} · {car.size}</span>
+          <div className="text-[12px] text-[#555] mt-0.5">{order.owner_name}</div>
+          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] text-[#185FA5] bg-[#EDF5FF] px-2 py-0.5 rounded-full">{order.package_name}{order.variant_name !== 'All Size' ? ` · ${order.variant_name}` : ''}</span>
+            <span className="text-[11px] text-[#888]">{fmtRp(order.package_price)}</span>
           </div>
           {!isDone && (
             <div className="flex items-center gap-1 text-[12px] text-[#888] mt-1.5">
@@ -136,33 +146,39 @@ function QueueCard({ car, queuePos, eta, onRefresh, onOpenDetail, onToast }: Car
             {STAGE_CFG[nextStage].label}
           </button>
         )}
+        {isDone && (
+          <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-lg border border-[#A8E6CF] text-[#0A4D31] bg-[#D4F5E9] hover:bg-[#A8E6CF] transition-all" onClick={pickUp}>
+            <CheckCheck className="w-3 h-3" />
+            Diambil
+          </button>
+        )}
         <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-lg border border-[#BBEECC] text-[#1a7a42] hover:bg-[#F0FBF3] transition-all" onClick={kirimWA}>
           <MessageCircle className="w-3 h-3" />
           WA
         </button>
-        <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-lg border border-[#D0C8F0] text-[#3D2B8C] hover:bg-[#F0EEFF] transition-all" onClick={() => onOpenDetail(car.id)}>
+        <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-lg border border-[#D0C8F0] text-[#3D2B8C] hover:bg-[#F0EEFF] transition-all" onClick={() => onOpenDetail(order.id)}>
           <Info className="w-3 h-3" />
           Detail
         </button>
-        <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-lg border border-[#F0CECE] text-[#A32D2D] hover:bg-[#FCEBEB] transition-all" onClick={hapus}>
-          <Trash2 className="w-3 h-3" />
-          Hapus
+        <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-lg border border-[#F0CECE] text-[#A32D2D] hover:bg-[#FCEBEB] transition-all" onClick={cancel}>
+          <X className="w-3 h-3" />
+          Batal
         </button>
       </div>
     </div>
   );
 }
 
-export default function QueueList({ queue, type, onRefresh, onOpenDetail, onToast }: Props) {
-  const filtered = queue.filter((c) => c.type === type);
-  const stages = stagesOf(type);
+export default function QueueList({ queue, workflowType, onRefresh, onOpenDetail, onToast }: Props) {
+  const filtered = queue.filter((c) => c.workflow_type === workflowType);
+  const stages = stagesOf(workflowType);
   // Show from last stage (Selesai) down to Menunggu so newest progress is at top
   const displayOrder = [...stages].reverse();
 
   return (
     <div>
       {displayOrder.map((stage) => {
-        const group = filtered.filter((c) => c.stage === stage);
+        const group = filtered.filter((c) => c.current_status === stage);
         const cfg = STAGE_CFG[stage];
         return (
           <div key={stage}>
@@ -178,12 +194,12 @@ export default function QueueList({ queue, type, onRefresh, onOpenDetail, onToas
                 Tidak ada kendaraan
               </div>
             ) : (
-              group.map((car) => (
+              group.map((order) => (
                 <QueueCard
-                  key={car.id}
-                  car={car}
-                  queuePos={filtered.indexOf(car) + 1}
-                  eta={etaMenit(car, filtered)}
+                  key={order.id}
+                  order={order}
+                  queuePos={filtered.indexOf(order) + 1}
+                  eta={etaMenit(order, filtered)}
                   onRefresh={onRefresh}
                   onOpenDetail={onOpenDetail}
                   onToast={onToast}
