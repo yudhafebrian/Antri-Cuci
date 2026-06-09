@@ -71,13 +71,10 @@ export default function AntrianPage({ queue }: Props) {
   return (
     <div className="min-h-screen bg-[#F5F5F0] flex justify-center">
       <div className="w-full max-w-[430px] min-h-screen bg-[#F5F5F0] relative overflow-x-hidden">
-        <div className="bg-white border-b border-[#E8E8E4] px-4 py-3.5 flex items-center justify-between sticky top-0 z-30">
+        <div className="bg-white border-b border-[#E8E8E4] px-4 py-3.5 flex items-center sticky top-0 z-30">
           <button onClick={() => navigate('/')} className="flex items-center gap-2 text-[17px] font-semibold text-[#1a1a1a] cursor-pointer">
             <img src="/Logo-FIP-Black-Transparent-NoText.webp" alt="FIP" className="h-6 w-auto object-contain" />
             FIP Autoshop
-          </button>
-          <button onClick={() => navigate('/admin')} className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#E6F1FB] text-[#0C447C] cursor-pointer">
-            Admin
           </button>
         </div>
 

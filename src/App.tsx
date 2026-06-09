@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import AdminPage from './pages/AdminPage';
 import AntrianPage from './pages/AntrianPage';
 import ReportPage from './pages/ReportPage';
+import ActiveQueuePage from './pages/ActiveQueuePage';
 import { loadActiveOrders, subscribeToOrders, type ServiceOrderRow } from './lib/db';
 import './App.css';
 
@@ -34,6 +35,9 @@ export default function App() {
         } />
         <Route path="/report" element={
           <ReportPage />
+        } />
+        <Route path="/report/active-queue" element={
+          <ActiveQueuePage />
         } />
       </Routes>
     </div>

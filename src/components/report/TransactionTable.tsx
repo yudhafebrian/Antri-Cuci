@@ -13,6 +13,8 @@ interface TransactionTableProps {
   pageSize?: number;
   onPageChange: (page: number) => void;
   loading?: boolean;
+  /** Mobile card-list mode instead of full table */
+  mobile?: boolean;
 }
 
 function formatTime(iso: string | null): string {
@@ -28,11 +30,113 @@ export default function TransactionTable({
   pageSize = 20,
   onPageChange,
   loading = false,
+  mobile = false,
 }: TransactionTableProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const start = (page - 1) * pageSize + 1;
   const end   = Math.min(page * pageSize, total);
 
+  // ── Mobile card-list view ──────────────────────────────────────────────────
+  if (mobile) {
+    return (
+      <div className="bg-white rounded-xl border border-[#E8E8E4] overflow-hidden">
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center justify-between">
+          <span className="text-[13px] font-semibold text-[#1a1a1a]">Transaksi Terbaru</span>
+          {total > 0 && (
+            <span className="text-[11px] text-[#888]">{start}–{end} / {total}</span>
+          )}
+        </div>
+
+        {/* Cards */}
+        {loading && (
+          <div className="py-8 text-center text-[12px] text-[#888]">Memuat data...</div>
+        )}
+        {!loading && rows.length === 0 && (
+          <div className="py-10 text-center">
+            <div className="text-[24px] mb-1">🧾</div>
+            <div className="text-[12px] text-[#888]">Belum ada transaksi untuk periode ini</div>
+          </div>
+        )}
+        {!loading && rows.map((row, i) => {
+          const statusCfg = STAGE_CFG[row.status as keyof typeof STAGE_CFG];
+          const rowNum = start + i;
+          return (
+            <div key={row.id} className="px-4 py-3 border-b border-[#F5F5F0] last:border-0">
+              {/* Row 1: number + plate + queue number + status */}
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-[10px] text-[#bbb] w-5 flex-shrink-0">{rowNum}</span>
+                  <span className="font-bold text-[12px] text-[#1a1a1a] tracking-wide">{row.plateNumber}</span>
+                  {row.queueNumber && (
+                    <span className="text-[10px] font-mono font-semibold text-[#185FA5] bg-[#EDF5FF] px-1.5 py-0.5 rounded">
+                      #{String(row.queueNumber).padStart(4, '0')}
+                    </span>
+                  )}
+                </div>
+                {statusCfg ? (
+                  <span
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0"
+                    style={{ backgroundColor: statusCfg.badgeBg, color: statusCfg.badgeColor }}
+                  >
+                    {statusCfg.label}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-[#888] flex-shrink-0">{row.status}</span>
+                )}
+              </div>
+              {/* Row 2: vehicle + package */}
+              <div className="flex items-center gap-1 text-[11px] text-[#555] mb-1 ml-7">
+                <span className="truncate max-w-[100px]">{row.vehicleName}</span>
+                <span className="text-[#ccc]">·</span>
+                <span className="truncate flex-1">{row.packageName}</span>
+                {row.variantName && (
+                  <>
+                    <span className="text-[#ccc]">·</span>
+                    <span className="text-[#888] truncate">{row.variantName}</span>
+                  </>
+                )}
+              </div>
+              {/* Row 3: price + times + duration */}
+              <div className="flex items-center gap-3 ml-7 text-[11px]">
+                <span className="font-semibold text-[#1a1a1a]">{formatRpFull(row.packagePrice)}</span>
+                <span className="text-[#888]">{formatTime(row.jamMasuk)} → {formatTime(row.jamSelesai)}</span>
+                {row.durationMinutes != null && (
+                  <span className="text-[#888]">{formatMinutesToHM(row.durationMinutes)}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-4 py-3 border-t border-[#E8E8E4] flex items-center justify-between">
+            <div className="text-[11px] text-[#888]">{page} / {totalPages}</div>
+            <div className="flex items-center gap-1">
+              <PagButton onClick={() => onPageChange(page - 1)} disabled={page === 1} label="‹" />
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let p: number;
+                if (totalPages <= 5) p = i + 1;
+                else if (page <= 3) p = i + 1;
+                else if (page >= totalPages - 2) p = totalPages - 4 + i;
+                else p = page - 2 + i;
+                return (
+                  <button key={p} onClick={() => onPageChange(p)}
+                    className={`w-7 h-7 rounded text-[11px] font-medium transition-colors ${p === page ? 'bg-[#185FA5] text-white' : 'text-[#555] hover:bg-[#F5F5F0]'}`}>
+                    {p}
+                  </button>
+                );
+              })}
+              <PagButton onClick={() => onPageChange(page + 1)} disabled={page === totalPages} label="›" />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Desktop table view ─────────────────────────────────────────────────────
   return (
     <div className="bg-white rounded-xl border border-[#E8E8E4] overflow-hidden">
       {/* Header */}

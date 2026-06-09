@@ -21,6 +21,8 @@ interface KPICardProps {
   invertGrowth?: boolean;
   /** Sub label below value */
   subLabel?: string;
+  /** Compact mode: smaller icon, shorter growth text — for 2-col mobile grids */
+  compact?: boolean;
 }
 
 export default function KPICard({
@@ -32,6 +34,7 @@ export default function KPICard({
   isCurrency = false,
   invertGrowth = false,
   subLabel,
+  compact = false,
 }: KPICardProps) {
   const displayValue = isCurrency && typeof value === 'number'
     ? formatRpFull(value)
@@ -58,14 +61,16 @@ export default function KPICard({
 
   return (
     <div
-      className="bg-white rounded-xl border border-[#E8E8E4] p-4 flex flex-col gap-3"
+      className={`bg-white rounded-xl border border-[#E8E8E4] flex flex-col ${compact ? 'p-3 gap-2' : 'p-4 gap-3'}`}
       style={{ minWidth: 0 }}
     >
       {/* Top row: label + icon */}
       <div className="flex items-start justify-between gap-2">
-        <span className="text-[13px] font-medium text-[#666] leading-tight">{label}</span>
+        <span className={`font-medium text-[#666] leading-tight ${compact ? 'text-[11px]' : 'text-[13px]'}`}>
+          {label}
+        </span>
         {icon && (
-          <div className={`w-9 h-9 rounded-lg ${iconBgColor} flex items-center justify-center flex-shrink-0`}>
+          <div className={`rounded-lg ${iconBgColor} flex items-center justify-center flex-shrink-0 ${compact ? 'w-7 h-7' : 'w-9 h-9'}`}>
             {icon}
           </div>
         )}
@@ -73,7 +78,10 @@ export default function KPICard({
 
       {/* Value */}
       <div className="min-w-0">
-        <div className="text-[22px] font-bold text-[#1a1a1a] leading-tight truncate" title={String(displayValue)}>
+        <div
+          className={`font-bold text-[#1a1a1a] leading-tight truncate ${compact ? 'text-[18px]' : 'text-[22px]'}`}
+          title={String(displayValue)}
+        >
           {displayValue}
         </div>
         {subLabel && (
@@ -83,9 +91,12 @@ export default function KPICard({
 
       {/* Growth badge */}
       {growth !== null && (
-        <div className={`inline-flex items-center gap-1 self-start px-2 py-0.5 rounded-full text-[11px] font-semibold ${growthBg} ${growthColor}`}>
+        <div className={`inline-flex items-center gap-1 self-start px-2 py-0.5 rounded-full font-semibold ${growthBg} ${growthColor} ${compact ? 'text-[10px]' : 'text-[11px]'}`}>
           <span>{arrowIcon}</span>
-          <span>{Math.abs(growth)}% dari periode sebelumnya</span>
+          {compact
+            ? <span>{Math.abs(growth)}% vs sebelumnya</span>
+            : <span>{Math.abs(growth)}% dari periode sebelumnya</span>
+          }
         </div>
       )}
     </div>

@@ -1,51 +1,14 @@
 /**
  * ReportSidebar.tsx
- * Dummy sidebar navigasi — visual only, tidak dapat diklik.
- * Sesuai referensi UI FIP Autoshop Owner Dashboard.
+ * Sidebar navigasi untuk Laporan & Analitik.
+ * Laporan & Analitik = aktif. Antrian Aktif = clickable navigasi ke /report/active-queue.
  */
 
+import { useNavigate } from 'react-router-dom';
 import { getSession } from '../../lib/auth';
 
-const NAV_ITEMS = [
-  {
-    group: null,
-    items: [
-      { icon: HomeIcon, label: 'Ringkasan', active: false },
-    ],
-  },
-  {
-    group: 'TRANSAKSI',
-    items: [
-      { icon: ListIcon, label: 'Antrian Aktif', active: false },
-      { icon: ClockIcon, label: 'Riwayat Transaksi', active: false },
-      { icon: PlusIcon, label: 'Tambah Kendaraan', active: false },
-    ],
-  },
-  {
-    group: 'MASTER DATA',
-    items: [
-      { icon: CarIcon, label: 'Kendaraan', active: false },
-      { icon: TagIcon, label: 'Paket & Harga', active: false },
-      { icon: UserIcon, label: 'Pelanggan', active: false },
-    ],
-  },
-  {
-    group: 'LAPORAN',
-    items: [
-      { icon: BarChartIcon, label: 'Laporan & Analitik', active: true },
-    ],
-  },
-  {
-    group: 'PENGATURAN',
-    items: [
-      { icon: ShieldIcon, label: 'User & Admin', active: false },
-      { icon: BuildingIcon, label: 'Pengaturan Outlet', active: false },
-      { icon: WorkflowIcon, label: 'SOP & Workflow', active: false },
-    ],
-  },
-];
-
 export default function ReportSidebar() {
+  const navigate = useNavigate();
   const session = getSession();
   const displayName = session?.displayName || 'Owner';
 
@@ -71,35 +34,89 @@ export default function ReportSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4">
-        {NAV_ITEMS.map((section, si) => (
-          <div key={si}>
-            {section.group && (
-              <div className="text-[10px] font-semibold text-[#aaa] tracking-widest px-2 mb-1 mt-1">
-                {section.group}
-              </div>
-            )}
-            <div className="space-y-0.5">
-              {section.items.map((item, ii) => (
-                <div
-                  key={ii}
-                  className={`
-                    flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-default transition-none
-                    ${item.active
-                      ? 'bg-[#EDF5FF] text-[#185FA5]'
-                      : 'text-[#555] opacity-60'
-                    }
-                  `}
-                >
-                  <item.icon
-                    size={16}
-                    className={item.active ? 'text-[#185FA5]' : 'text-[#888]'}
-                  />
-                  <span className="truncate">{item.label}</span>
-                </div>
-              ))}
+        {/* Ringkasan */}
+        <div>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-default text-[#555] opacity-60">
+              <HomeIcon size={16} className="text-[#888]" />
+              <span>Ringkasan</span>
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* TRANSAKSI */}
+        <div>
+          <div className="text-[10px] font-semibold text-[#aaa] tracking-widest px-2 mb-1 mt-1">TRANSAKSI</div>
+          <div className="space-y-0.5">
+            {/* Antrian Aktif — clickable, navigasi ke active queue */}
+            <button
+              onClick={() => navigate('/report/active-queue')}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-left text-[#555] hover:bg-[#F5F5F0] transition-colors"
+            >
+              <ListIcon size={16} className="text-[#888]" />
+              <span>Antrian Aktif</span>
+            </button>
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-default text-[#555] opacity-60">
+              <ClockIcon size={16} className="text-[#888]" />
+              <span>Riwayat Transaksi</span>
+            </div>
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-default text-[#555] opacity-60">
+              <PlusIcon size={16} className="text-[#888]" />
+              <span>Tambah Kendaraan</span>
+            </div>
+          </div>
+        </div>
+
+        {/* MASTER DATA */}
+        <div>
+          <div className="text-[10px] font-semibold text-[#aaa] tracking-widest px-2 mb-1 mt-1">MASTER DATA</div>
+          <div className="space-y-0.5">
+            {[
+              { icon: CarIcon, label: 'Kendaraan' },
+              { icon: TagIcon, label: 'Paket & Harga' },
+              { icon: UserIcon, label: 'Pelanggan' },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-default text-[#555] opacity-60">
+                <item.icon size={16} className="text-[#888]" />
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* LAPORAN */}
+        <div>
+          <div className="text-[10px] font-semibold text-[#aaa] tracking-widest px-2 mb-1 mt-1">LAPORAN</div>
+          <div className="space-y-0.5">
+            {/* Laporan & Analitik — active */}
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium bg-[#EDF5FF] text-[#185FA5]">
+              <BarChartIcon size={16} className="text-[#185FA5]" />
+              <span>Laporan & Analitik</span>
+            </div>
+            {/* Export Data — visual only */}
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-default text-[#555] opacity-60">
+              <ExportIcon size={16} className="text-[#888]" />
+              <span>Export Data</span>
+            </div>
+          </div>
+        </div>
+
+        {/* PENGATURAN */}
+        <div>
+          <div className="text-[10px] font-semibold text-[#aaa] tracking-widest px-2 mb-1 mt-1">PENGATURAN</div>
+          <div className="space-y-0.5">
+            {[
+              { icon: ShieldIcon, label: 'User & Admin' },
+              { icon: BuildingIcon, label: 'Pengaturan Outlet' },
+              { icon: WorkflowIcon, label: 'SOP & Workflow' },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-default text-[#555] opacity-60">
+                <item.icon size={16} className="text-[#888]" />
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </nav>
 
       {/* User pill at bottom */}
@@ -214,6 +231,14 @@ function WorkflowIcon({ size = 16, className = '' }: { size?: number; className?
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/>
       <rect width="8" height="8" x="13" y="13" rx="2"/>
+    </svg>
+  );
+}
+
+function ExportIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
     </svg>
   );
 }

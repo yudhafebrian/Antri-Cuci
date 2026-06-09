@@ -7,6 +7,8 @@ import { type StationOvertime, formatMinutesToHM, calcGrowthPercent } from '../.
 
 interface OvertimeCardProps {
   stats: StationOvertime[];
+  /** Mobile mode: 2x2 grid instead of 1xN */
+  mobile?: boolean;
 }
 
 function MiniSparkline({ color, up }: { color: string; up: boolean }) {
@@ -28,7 +30,7 @@ function MiniSparkline({ color, up }: { color: string; up: boolean }) {
   );
 }
 
-export default function OvertimeCard({ stats }: OvertimeCardProps) {
+export default function OvertimeCard({ stats, mobile = false }: OvertimeCardProps) {
   // Poles hanya tampil jika ada data (premium orders)
   const visibleStats = stats.filter((s) => s.station !== 'poles' || s.totalOrders > 0);
 
@@ -54,8 +56,8 @@ export default function OvertimeCard({ stats }: OvertimeCardProps) {
         <span className="text-[11px] text-[#888]">Urut: overtime terbanyak</span>
       </div>
 
-      {/* Station cards grid */}
-      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${visibleStats.length}, minmax(0, 1fr))` }}>
+      {/* Station cards grid — mobile: 2x2, desktop: 1xN */}
+      <div className={mobile ? 'grid grid-cols-2 gap-2' : 'grid gap-2'} style={mobile ? undefined : { gridTemplateColumns: `repeat(${visibleStats.length}, minmax(0, 1fr))` }}>
         {visibleStats.map((stat) => {
           const growth = calcGrowthPercent(stat.totalOvertimeMinutes, stat.prevTotalOvertimeMinutes);
           const isUp = growth !== null && growth > 0;

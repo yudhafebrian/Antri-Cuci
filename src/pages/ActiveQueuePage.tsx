@@ -1,20 +1,18 @@
 /**
- * ReportPage.tsx
- * Route: /report
+ * ActiveQueuePage.tsx
+ * Route: /report/active-queue
  * Auth-gated. Detects screen width and renders desktop or mobile view.
- * Desktop: ReportDesktop (full sidebar + wide grid layout)
- * Mobile:  ReportMobile (max-w-430px single-column layout)
  */
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSession } from '../lib/auth';
-import ReportDesktop from '../components/report/ReportDesktop';
-import ReportMobile from '../components/report/ReportMobile';
+import ActiveQueueDesktop from '../components/active-queue/ActiveQueueDesktop';
+import ActiveQueueMobile from '../components/active-queue/ActiveQueueMobile';
 
 const MOBILE_BREAKPOINT = 768;
 
-export default function ReportPage() {
+export default function ActiveQueuePage() {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
 
@@ -37,5 +35,5 @@ export default function ReportPage() {
   // Wait until we know screen size to avoid flash
   if (isMobile === null) return null;
 
-  return isMobile ? <ReportMobile /> : <ReportDesktop />;
+  return isMobile ? <ActiveQueueMobile /> : <ActiveQueueDesktop />;
 }
