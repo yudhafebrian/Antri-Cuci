@@ -25,11 +25,7 @@ import TransactionTable from './TransactionTable';
 import {
   calcGrowthPercent,
   formatMinutesToHM,
-  getFilterLabel,
-  getDateRangeFromPreset,
-  formatRpFull,
 } from '../../lib/reportService';
-import { getSession } from '../../lib/auth';
 
 const FILTER_PRESETS: { value: FilterPreset; label: string }[] = [
   { value: 'hari_ini',   label: 'Hari Ini' },
@@ -54,7 +50,6 @@ function formatDateRange(start: string, end: string): string {
 
 export default function ReportDesktop() {
   const navigate = useNavigate();
-  const session = getSession();
   const [customInputStart, setCustomInputStart] = useState('');
   const [customInputEnd, setCustomInputEnd]     = useState('');
   const [showCustomPicker, setShowCustomPicker] = useState(false);
